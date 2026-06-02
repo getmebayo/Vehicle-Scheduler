@@ -1,63 +1,185 @@
-Documentation for Vehicle Scheduler Code
+# Bus Fleet Scheduling and Energy Management Tool
 
-Overview
+## Overview
 
-This Python code snippet, referred to as the **Vehicle Scheduler**, is an enhanced version of the previous bus scheduling system. It allows users to efficiently schedule vehicles between two locations (origin and destination) while incorporating additional functionalities for improved fleet management. The program calculates departure and arrival times based on user-defined parameters such as travel time, terminal time, and headway. The output is presented in a visually appealing table format using Matplotlib, making it easy for users to understand the schedule immediately.
+The Bus Fleet Scheduling and Energy Management Tool is a Python-based transport planning application for generating operational bus schedules while evaluating fleet energy requirements, refuelling or recharging events, and vehicle utilisation.
 
-Capabilities
+The application produces vehicle schedules between two terminals based on route characteristics and service frequency requirements. Beyond traditional timetable outputs, the system assesses vehicle range limitations, predicts service or charging requirements, and communicates operational impacts through schedule tables, downtime summaries, and space-time diagrams.
 
-User Input
-- Origin and Destination: Users can specify the starting point and endpoint of the vehicle route.
-- Travel Time: Users can input the expected travel time between the origin and destination.
-- Terminal Time: The code automatically calculates terminal time as 15% of the travel time, representing the time spent at each terminal. This is not a fixed percentage and can be very easily modified based on the transport planner’s needs.
-- Headway: Users define the interval between successive vehicle departures, allowing for flexible scheduling.
+The tool supports diesel, battery-electric (BEV), hydrogen fuel-cell (FCEV), hybrid, and compressed natural gas (CNG) buses, allowing transport planners to compare operational implications across different fleet technologies side by side.
 
-Scheduling Logic
-- Dynamic Scheduling: The program calculates the number of vehicles required based on total cycle time and headway. It accommodates both integer and non-integer vehicle counts by rounding up to ensure sufficient coverage.
-- Simultaneous Departures: The code is designed to schedule vehicles from both directions (origin to destination and destination to origin) concurrently, optimizing fleet utilization.
-- Cyclic Vehicle Numbers: Vehicle numbers are assigned in a cyclic manner, ensuring that all vehicles are identified uniquely while maintaining clarity. Although these vehicle numbers are randomly generated for scheduling purposes, it is recommended that actual registration numbers be used in practice for better identification.
+---
 
-Output
-- Visual Representation: The schedule is presented in a well-formatted table using Matplotlib. This table includes columns for vehicle numbers, departure times, arrival times, and directions.
-- Efficiency Calculation: The program calculates and displays scheduling efficiency based on total cycle time and adjusted cycle time.
+## Core Capabilities
 
-Value to Users
+### Route and Service Configuration
 
-The Vehicle Scheduler offers significant value in terms of efficient fleet management:
-- Improved Resource Allocation: By calculating optimal schedules based on user inputs, fleet managers can ensure that their resources are utilized effectively.
-- Enhanced Operational Efficiency: The ability to schedule vehicles concurrently from both directions reduces waiting times for passengers and maximizes service availability.
-- User-Friendly Interface: The clear output format allows users to quickly assess schedules without needing complex calculations or additional tools.
+Users define:
 
-Customization for Fleet Management
-While vehicle numbers are generated randomly in this implementation, it is advisable for fleet managers to use actual vehicle registration numbers on the schedule charts. This enhances identification and tracking of individual vehicles. Furthermore, schedules can be broken down based on the intensity of vehicle demand throughout the day—differentiating between peak travel times (when demand is highest) and normal travel periods. This breakdown allows for more strategic deployment of resources during busy times while optimizing costs during quieter periods.
+- Origin and destination terminals
+- One-way route distance (km)
+- One-way travel time (minutes)
+- Departure headway (minutes between services)
+- Operating period (start and end times)
+- Departure date
 
-Recent Updates
+A default terminal layover time of 15% of travel time is calculated automatically and can be overridden to reflect local operating conditions.
 
-The current version of the Vehicle Scheduler builds upon the previous bus scheduling creator. While the following enhancements have not yet been implemented, the existing code structure allows for easy integration of these features in the future:
+---
 
-- Simultaneous Scheduling Logic: The code is designed to facilitate simultaneous scheduling of vehicles traveling in both directions, allowing for efficient resource allocation.
-  
-- Vehicle Identification: Although vehicle numbers are currently generated randomly, the code can be easily modified to incorporate actual vehicle registration numbers for better identification and tracking.
+### Multi-Technology Fleet Modelling
 
-- Demand Analysis Capability: The framework supports the potential to analyze scheduling based on peak travel intensity versus normal demand, enabling fleet managers to optimize vehicle deployment based on real-time needs.
+The tool ships with five configurable vehicle profiles:
 
-Potential Enhancements
+| Bus Type | Energy Source | Default Range | Default Service Time |
+|---|---|---|---|
+| Diesel | Diesel | 600 km | 10 min |
+| Battery-Electric (BEV) | Electric | 250 km | 45 min |
+| Hydrogen Fuel-Cell (FCEV) | Hydrogen | 400 km | 8 min |
+| Hybrid (Diesel-Electric) | Hybrid | 450 km | 12 min |
+| CNG | Compressed Natural Gas | 350 km | 10 min |
 
-While this code provides robust functionality for basic vehicle scheduling needs, several minor additions could enhance its capabilities further:
+All parameters can be overridden at runtime to model specific fleet configurations or procurement scenarios.
 
-1. Real-Time Updates: Implementing a feature that allows real-time updates to schedules based on traffic conditions or delays could significantly improve service reliability.
+---
 
-2. User Preferences: Adding options for users to specify preferences (e.g., preferred departure times or minimum layover times) could lead to more customized scheduling.
+### Automatic Fleet Sizing
 
-3. Data Persistence: Integrating a database or file storage system could allow users to save and retrieve schedules easily, facilitating long-term planning.
+The software determines:
 
-4. Graphical User Interface (GUI): Developing a GUI would make the application more accessible to users who may not be comfortable with command-line interfaces.
+- Total round-trip cycle time
+- Minimum fleet size required for the given headway
+- Adjusted operational cycle time
+- Schedule efficiency (%)
 
-5. Reporting Features: Adding functionality to generate reports on vehicle utilization, passenger counts, or operational costs could provide valuable insights for fleet managers.
+Fleet size is derived from the ratio of cycle time to headway, ensuring adequate vehicle coverage across the entire operating period.
 
-6. Integration with Other Systems: Connecting this scheduling system with other transportation management systems could streamline operations further and improve overall efficiency.
+---
 
-Conclusion
+### Vehicle Assignment and Trip Scheduling
 
-The Vehicle Scheduler serves as a foundational tool for efficient fleet management in public transportation. Its capabilities can be easily expanded upon with additional features, making it a versatile solution for modern transportation needs. By implementing this code, users can optimize their vehicle schedules effectively while ensuring high levels of service reliability and customer satisfaction. The ability to use actual vehicle registration numbers alongside a detailed breakdown of scheduling based on demand intensity further enhances its practical application in real-world scenarios.
+Vehicles are assigned cyclically across departures to balance fleet utilisation. For each trip the system calculates:
 
+- Departure from Terminal A
+- Arrival at Terminal B
+- Departure from Terminal B (after layover)
+- Return arrival at Terminal A
+
+---
+
+### Energy Consumption and Service Event Modelling
+
+The tool tracks accumulated vehicle mileage continuously and triggers a refuelling or recharging event when a vehicle reaches **90% of its usable operating range**.
+
+For each service event the system records:
+
+- Vehicle identifier
+- Service start and end time
+- Distance travelled at the trigger point
+- Whether the event fits within the scheduled layover window
+- Additional operational delay introduced, if any
+
+This enables planners to evaluate the practical feasibility of alternative propulsion technologies under real-world service patterns.
+
+---
+
+### Operational Downtime Assessment
+
+The system checks whether refuelling or charging can be completed within normal terminal layovers. Where service durations exceed available layover time, the tool identifies:
+
+- Potential service disruptions
+- Additional delay requirements
+- Vehicle-level operational constraints
+
+This is especially relevant for battery-electric and hydrogen fleets, where energy replenishment strategy has a direct bearing on scheduling feasibility.
+
+---
+
+## Outputs
+
+### Schedule Table
+
+A colour-coded timetable showing vehicle assignment, departure times, arrival times, and terminal turnaround periods. Each vehicle is assigned a distinct colour for quick identification.
+
+### Space-Time Diagram
+
+A graphical representation of all vehicle movements, showing:
+
+- **Solid diagonal lines** — outbound movements (A → B)
+- **Dashed diagonal lines** — return movements (B → A)
+- **Dotted horizontal segments** — terminal layovers at B
+- **Red shaded bands** — service or charging downtime events
+
+Downtime events are annotated directly on the diagram, enabling visual identification of scheduling bottlenecks.
+
+### Downtime Summary Table
+
+A dedicated report listing every service event with:
+
+- Vehicle affected
+- Service start and end times
+- Odometer reading at trigger
+- Layover compliance (fits / does not fit)
+- Extra delay incurred
+
+### CSV Export
+
+All outputs are written to a single CSV file containing three sections:
+
+1. **Trip Schedule** — vehicle assignments and departure/arrival times
+2. **Fleet Configuration** — technology, energy type, range, service duration
+3. **Service Events** — refuelling/charging timing, trigger distances, delay impacts
+
+The export is compatible with Excel, Power BI, and third-party transport planning tools.
+
+---
+
+## How to Run
+
+```bash
+python bus_scheduler.py
+```
+
+The program runs interactively and prompts for all required inputs in sequence:
+
+1. Origin and destination terminal names
+2. One-way distance (km) and travel time (minutes)
+3. Terminal layover time (default or manual override)
+4. Departure headway (minutes)
+5. Departure date and operating period
+6. Bus type selection and optional parameter overrides
+
+No configuration files or external databases are required.
+
+---
+
+## Dependencies
+
+| Package | Purpose |
+|---|---|
+| `matplotlib` | Schedule table, space-time diagram, downtime summary |
+| `csv` | CSV export (standard library) |
+| `math`, `colorsys`, `collections`, `datetime` | Core calculations (standard library) |
+
+Install with:
+
+```bash
+pip install matplotlib
+```
+
+---
+
+## Future Development Opportunities
+
+Potential enhancements identified for future versions:
+
+1. State-of-charge modelling for battery-electric fleets
+2. Depot-based charging and refuelling scheduling
+3. Real-time traffic and travel-time integration
+4. Passenger demand modelling
+5. Named vehicle registration and fleet assignment
+6. Multi-route network scheduling
+7. Graphical User Interface (GUI)
+8. Database integration for persistent schedule storage
+9. Cost, emissions, and energy consumption analysis
+10. Integration with transport management systems and AVL platforms
